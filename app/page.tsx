@@ -23,7 +23,7 @@ export default function Home() {
     try {
       const [weatherRes, mapResult] = await Promise.all([
         fetch(`https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weathercode,is_day&hourly=temperature_2m,weathercode,precipitation_probability&forecast_days=1&timezone=auto`),
-        fetchMapData(c.lat, c.lon, 4000),
+        fetchMapData(c.lat, c.lon),
       ]);
       const wData = await weatherRes.json();
       const cur = wData.current;
@@ -186,3 +186,4 @@ export default function Home() {
     </main>
   );
 }
+

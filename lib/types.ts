@@ -130,4 +130,6 @@ export interface SVGPaths {
   roads: Record<string, string[]>;
   water: string[];
   parks: string[];
+  buildings: string[];
 }
+
