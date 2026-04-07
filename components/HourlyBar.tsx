@@ -28,11 +28,10 @@ export default function HourlyBar({ hourly, theme }: Props) {
           <div key={i} style={{
             display: "flex", flexDirection: "column", alignItems: "center",
             minWidth: 38, gap: 3,
-            opacity: isNow ? 1 : 0.5,
             transition: "opacity 0.3s",
           }}>
             <div style={{
-              fontSize: 9, color: isNow ? theme.accent : theme.sub,
+              fontSize: 9, color: isNow ? theme.accent : `${theme.sub}bb`,
               fontFamily: "'DM Mono', monospace", letterSpacing: 0,
             }}>
               {Math.round(h.temp)}°
@@ -47,13 +46,13 @@ export default function HourlyBar({ hourly, theme }: Props) {
               transition: "height 0.5s ease",
             }} />
             {h.precip > 30 && (
-              <div style={{ fontSize: 7, color: theme.sub, marginTop: -2 }}>
+              <div style={{ fontSize: 7, color: `${theme.sub}bb`, marginTop: -2 }}>
                 {h.precip}%
               </div>
             )}
             <div style={{
               fontSize: 8,
-              color: isNow ? theme.accent : theme.sub,
+              color: isNow ? theme.accent : `${theme.sub}bb`,
               fontFamily: "'DM Mono', monospace",
             }}>
               {label}

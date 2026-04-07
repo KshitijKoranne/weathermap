@@ -29,7 +29,7 @@ export const THEMES: Record<string, Theme> = {
     bg: "#010810", water: "#083460", park: "#030e18",
     motorway: "#48b8f0", primary: "#0280c8", secondary: "#014f90",
     tertiary: "#013260", residential: "#011e40",
-    text: "#b0e0f8", accent: "#48b8f0", sub: "#3a7898",
+    text: "#b0e0f8", accent: "#48b8f0", sub: "#5aaad8",
     gradient: ["#0a1628", "#1565c0", "#4fc3f7"],
   },
   storm: {
@@ -37,7 +37,7 @@ export const THEMES: Record<string, Theme> = {
     bg: "#030008", water: "#180028", park: "#080010",
     motorway: "#d838f0", primary: "#9800e0", secondary: "#6800b0",
     tertiary: "#420070", residential: "#280045",
-    text: "#e878ff", accent: "#d838f0", sub: "#8830a8",
+    text: "#e878ff", accent: "#d838f0", sub: "#c060e0",
     gradient: ["#0d001a", "#4a0080", "#e040fb"],
   },
   fog: {
@@ -45,7 +45,7 @@ export const THEMES: Record<string, Theme> = {
     bg: "#0a0a10", water: "#181828", park: "#0f0f18",
     motorway: "#98aac0", primary: "#687888", secondary: "#485868",
     tertiary: "#344050", residential: "#222c38",
-    text: "#c8d8e8", accent: "#98aac0", sub: "#586878",
+    text: "#c8d8e8", accent: "#98aac0", sub: "#8098b0",
     gradient: ["#0a0a10", "#2a3040", "#98aac0"],
   },
   cloudy: {
@@ -53,7 +53,7 @@ export const THEMES: Record<string, Theme> = {
     bg: "#070b0f", water: "#121e28", park: "#0b1218",
     motorway: "#88a0b8", primary: "#586878", secondary: "#404e5e",
     tertiary: "#2c3840", residential: "#1e2830",
-    text: "#c0d0e0", accent: "#88a0b8", sub: "#485868",
+    text: "#c0d0e0", accent: "#88a0b8", sub: "#7a9ab8",
     gradient: ["#070b0f", "#1a2430", "#88a0b8"],
   },
   night: {

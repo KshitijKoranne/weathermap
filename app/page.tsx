@@ -14,11 +14,13 @@ export default function Home() {
   const [svgPaths, setSvgPaths] = useState<SVGPaths | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mapError, setMapError] = useState<string | null>(null);
   const [cityLabel, setCityLabel] = useState("");
 
   const loadCity = useCallback(async (c: City) => {
     setLoading(true);
     setError(null);
+    setMapError(null);
     setCityLabel(c.name);
     try {
       const [weatherRes, mapResult] = await Promise.all([
@@ -31,10 +33,16 @@ export default function Home() {
       setCity(c);
       setWeather({ current: cur, hourly: wData.hourly });
       setTheme(t);
-      const paths = parseOSM(mapResult.data, mapResult.bounds, MAP_W, MAP_H);
-      setSvgPaths(paths);
+
+      if (mapResult.data?.error) {
+        setMapError("Map unavailable — sources busy. Weather data loaded.");
+        setSvgPaths(null);
+      } else {
+        const paths = parseOSM(mapResult.data, mapResult.bounds, MAP_W, MAP_H);
+        setSvgPaths(paths);
+      }
     } catch {
-      setError("Could not load data. Try another city.");
+      setError("Could not load weather data. Try another city.");
     } finally {
       setLoading(false);
     }
@@ -92,9 +100,18 @@ export default function Home() {
         }}>{error}</div>
       )}
 
+      {mapError && !error && (
+        <div style={{
+          position: "absolute", top: 80, left: "50%", transform: "translateX(-50%)",
+          zIndex: 30, background: `${theme.bg}cc`, border: `1px solid ${theme.sub}33`,
+          backdropFilter: "blur(8px)", padding: "8px 18px",
+          color: theme.sub, fontSize: 10, letterSpacing: 2, whiteSpace: "nowrap",
+        }}>{mapError}</div>
+      )}
+
       {weather && city && !loading && (
         <div style={{ position: "absolute", bottom: 140, left: 28, zIndex: 20, animation: "fadeIn 0.7s ease" }}>
-          <div style={{ fontSize: 9, letterSpacing: 5, color: theme.sub, marginBottom: 2 }}>
+          <div style={{ fontSize: 9, letterSpacing: 5, color: theme.sub, marginBottom: 2, opacity: 0.6 }}>
             {theme.label} {theme.name}
           </div>
           <div style={{
