@@ -1,46 +1,37 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import MapSVG from "@/components/MapSVG";
+import dynamic from "next/dynamic";
 import HourlyBar from "@/components/HourlyBar";
 import SearchBar from "@/components/SearchBar";
 import { getTheme, weatherDesc, THEMES } from "@/lib/types";
-import { fetchMapData, parseOSM, MAP_W, MAP_H } from "@/lib/map";
-import type { Theme, City, WeatherData, SVGPaths } from "@/lib/types";
+import type { Theme, City, WeatherData } from "@/lib/types";
+
+const MapLibreMap = dynamic(() => import("@/components/MapLibreMap"), { ssr: false });
 
 export default function Home() {
   const [city, setCity] = useState<City | null>(null);
+  const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [theme, setTheme] = useState<Theme>(THEMES.night);
-  const [svgPaths, setSvgPaths] = useState<SVGPaths | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mapError, setMapError] = useState<string | null>(null);
   const [cityLabel, setCityLabel] = useState("");
 
   const loadCity = useCallback(async (c: City) => {
     setLoading(true);
     setError(null);
-    setMapError(null);
     setCityLabel(c.name);
     try {
-      const [weatherRes, mapResult] = await Promise.all([
-        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weathercode,is_day&hourly=temperature_2m,weathercode,precipitation_probability&forecast_days=1&timezone=auto`),
-        fetchMapData(c.lat, c.lon),
-      ]);
+      const weatherRes = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weathercode,is_day&hourly=temperature_2m,weathercode,precipitation_probability&forecast_days=1&timezone=auto`
+      );
       const wData = await weatherRes.json();
       const cur = wData.current;
       const t = getTheme(cur.weathercode, cur.is_day === 0);
       setCity(c);
       setWeather({ current: cur, hourly: wData.hourly });
       setTheme(t);
-
-      if (mapResult.data?.error) {
-        setMapError("Map unavailable — sources busy. Weather data loaded.");
-        setSvgPaths(null);
-      } else {
-        const paths = parseOSM(mapResult.data, mapResult.bounds, MAP_W, MAP_H);
-        setSvgPaths(paths);
-      }
+      setMapCenter([c.lon, c.lat]);
     } catch {
       setError("Could not load weather data. Try another city.");
     } finally {
@@ -68,13 +59,12 @@ export default function Home() {
       fontFamily: "'DM Mono', monospace",
       transition: "background 1.2s ease",
     }}>
-      <MapSVG paths={svgPaths} theme={theme} hasCity={!!city} />
+      <MapLibreMap theme={theme} center={mapCenter} hasCity={!!city} />
 
       {loading && (
         <div style={{
           position: "absolute", inset: 0, zIndex: 25,
-          display: "flex", flexDirection: "column",
-          alignItems: "center", justifyContent: "center",
+          display: "flex", alignItems: "center", justifyContent: "center",
           background: `${theme.bg}99`, backdropFilter: "blur(4px)",
         }}>
           <div style={{ fontSize: 10, letterSpacing: 6, color: theme.sub, animation: "pulse 1.4s ease infinite" }}>
@@ -98,15 +88,6 @@ export default function Home() {
           backdropFilter: "blur(8px)", padding: "10px 20px",
           color: "#ff8888", fontSize: 11, letterSpacing: 2,
         }}>{error}</div>
-      )}
-
-      {mapError && !error && (
-        <div style={{
-          position: "absolute", top: 80, left: "50%", transform: "translateX(-50%)",
-          zIndex: 30, background: `${theme.bg}cc`, border: `1px solid ${theme.sub}33`,
-          backdropFilter: "blur(8px)", padding: "8px 18px",
-          color: theme.sub, fontSize: 10, letterSpacing: 2, whiteSpace: "nowrap",
-        }}>{mapError}</div>
       )}
 
       {weather && city && !loading && (
@@ -171,7 +152,7 @@ export default function Home() {
 
       {city && !loading && (
         <div style={{ position: "absolute", top: 30, right: 24, zIndex: 20, textAlign: "right" }}>
-          <div style={{ fontSize: 8, letterSpacing: 2, color: `${theme.sub}88` }}>OSM · OPEN-METEO</div>
+          <div style={{ fontSize: 8, letterSpacing: 2, color: `${theme.sub}88` }}>OFM · OPEN-METEO</div>
           <div style={{ width: 20, height: 1, background: theme.accent, marginLeft: "auto", marginTop: 5 }} />
         </div>
       )}
@@ -197,10 +178,11 @@ export default function Home() {
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         ::-webkit-scrollbar { display: none; }
         html, body { width: 100%; height: 100%; overflow: hidden; }
+        .maplibregl-ctrl-bottom-right { display: none !important; }
+        .maplibregl-ctrl-bottom-left { display: none !important; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
       `}</style>
     </main>
   );
 }
-
