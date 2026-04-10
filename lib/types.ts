@@ -74,8 +74,7 @@ export const THEMES: Record<string, Theme> = {
   },
 };
 
-export function getTheme(weatherCode: number, isNight: boolean): Theme {
-  if (isNight) return THEMES.night;
+export function getTheme(weatherCode: number, _isNight: boolean): Theme {
   if (weatherCode <= 1) return THEMES.sunny;
   if (weatherCode <= 3) return THEMES.cloudy;
   if (weatherCode <= 49) return THEMES.fog;
