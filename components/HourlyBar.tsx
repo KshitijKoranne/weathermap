@@ -22,10 +22,13 @@ export default function HourlyBar({ hourly, theme, useFahrenheit = false }: Prop
   const maxT = Math.max(...temps);
 
   return (
-    <div style={{ display: "flex", gap: 0, alignItems: "flex-end", height: 72, overflowX: "auto", scrollbarWidth: "none" }}>
+    <div style={{ display: "flex", gap: 0, alignItems: "flex-end", height: 88, overflowX: "auto", scrollbarWidth: "none" }}>
       {hours.map((h, i) => {
         const isNow = Math.abs(h.time.getTime() - now.getTime()) < 3600000;
-        const heightPct = maxT === minT ? 40 : ((h.temp - minT) / (maxT - minT)) * 52 + 16;
+        // BAR_MIN/MAX chosen so tallest bar + label (9px) + gap (3px) fits within 88px container
+        const BAR_MIN = 14;
+        const BAR_MAX = 44;
+        const heightPct = maxT === minT ? BAR_MIN : ((h.temp - minT) / (maxT - minT)) * (BAR_MAX - BAR_MIN) + BAR_MIN;
         const label = h.time.getHours().toString().padStart(2, "0") + "h";
         return (
           <div key={i} style={{
