@@ -119,6 +119,10 @@ export interface WeatherData {
     weathercode: number[];
     precipitation_probability: number[];
   };
+  daily: {
+    sunrise: string[];
+    sunset: string[];
+  };
 }
 
 export interface MapBounds {

@@ -8,6 +8,12 @@ import type { Theme, City, WeatherData } from "@/lib/types";
 
 const MapLibreMap = dynamic(() => import("@/components/MapLibreMap"), { ssr: false });
 
+function toF(c: number) { return Math.round(c * 9 / 5 + 32); }
+function fmtTime(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
 export default function Home() {
   const [city, setCity] = useState<City | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
@@ -16,6 +22,16 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cityLabel, setCityLabel] = useState("");
+  const [useFahrenheit, setUseFahrenheit] = useState(false);
+  const [kbOpen, setKbOpen] = useState(false); // mobile keyboard state
+
+  const fmt = useCallback((c: number) =>
+    useFahrenheit ? `${toF(c)}°F` : `${Math.round(c)}°C`,
+  [useFahrenheit]);
+
+  const fmtBig = useCallback((c: number) =>
+    useFahrenheit ? `${toF(c)}°` : `${Math.round(c)}°`,
+  [useFahrenheit]);
 
   const loadCity = useCallback(async (c: City) => {
     setLoading(true);
@@ -23,13 +39,17 @@ export default function Home() {
     setCityLabel(c.name);
     try {
       const weatherRes = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weathercode,is_day&hourly=temperature_2m,weathercode,precipitation_probability&forecast_days=1&timezone=auto`
+        `https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}` +
+        `&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weathercode,is_day` +
+        `&hourly=temperature_2m,weathercode,precipitation_probability` +
+        `&daily=sunrise,sunset` +
+        `&forecast_days=1&timezone=auto`
       );
       const wData = await weatherRes.json();
       const cur = wData.current;
       const t = getTheme(cur.weathercode, cur.is_day === 0);
       setCity(c);
-      setWeather({ current: cur, hourly: wData.hourly });
+      setWeather({ current: cur, hourly: wData.hourly, daily: wData.daily });
       setTheme(t);
       setMapCenter([c.lon, c.lat]);
     } catch {
@@ -52,9 +72,26 @@ export default function Home() {
     }, fallback, { timeout: 5000 });
   }, [loadCity]);
 
+  // Mobile keyboard detection — listen for visualViewport resize
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const handler = () => {
+      const ratio = vv.height / window.innerHeight;
+      setKbOpen(ratio < 0.75);
+    };
+    vv.addEventListener("resize", handler);
+    return () => vv.removeEventListener("resize", handler);
+  }, []);
+
+  const sunrise = weather?.daily?.sunrise?.[0];
+  const sunset  = weather?.daily?.sunset?.[0];
+
   return (
     <main style={{
-      width: "100vw", height: "100dvh", overflow: "hidden",
+      width: "100vw",
+      height: kbOpen ? "auto" : "100dvh",
+      overflow: "hidden",
       background: theme.bg, position: "relative",
       fontFamily: "'DM Mono', monospace",
       transition: "background 1.2s ease",
@@ -73,10 +110,15 @@ export default function Home() {
         </div>
       )}
 
+      {/* Search bar — slides up when keyboard opens on mobile */}
       <div style={{
-        position: "absolute", top: 24, left: "50%",
+        position: "absolute",
+        top: kbOpen ? 12 : 24,
+        left: "50%",
         transform: "translateX(-50%)",
-        zIndex: 30, width: "min(400px, 88vw)",
+        zIndex: 30,
+        width: "min(400px, 88vw)",
+        transition: "top 0.2s ease",
       }}>
         <SearchBar theme={theme} onSelect={loadCity} initialValue={cityLabel} />
       </div>
@@ -90,7 +132,8 @@ export default function Home() {
         }}>{error}</div>
       )}
 
-      {weather && city && !loading && (
+      {/* Weather left panel — hidden when keyboard is open */}
+      {weather && city && !loading && !kbOpen && (
         <div style={{ position: "absolute", bottom: 140, left: 28, zIndex: 20, animation: "fadeIn 0.7s ease" }}>
           <div style={{ fontSize: 9, letterSpacing: 5, color: theme.sub, marginBottom: 2, opacity: 0.6 }}>
             {theme.label} {theme.name}
@@ -101,7 +144,7 @@ export default function Home() {
             lineHeight: 0.88, color: theme.text,
             textShadow: `0 0 50px ${theme.accent}33`, letterSpacing: 1,
           }}>
-            {Math.round(weather.current.temperature_2m)}°
+            {fmtBig(weather.current.temperature_2m)}
           </div>
           <div style={{ fontSize: 11, letterSpacing: 4, color: theme.accent, marginTop: 6, textTransform: "uppercase" }}>
             {weatherDesc(weather.current.weathercode)}
@@ -116,7 +159,8 @@ export default function Home() {
         </div>
       )}
 
-      {weather && city && !loading && (
+      {/* Stats right panel — hidden when keyboard is open */}
+      {weather && city && !loading && !kbOpen && (
         <div style={{
           position: "absolute", bottom: 148, right: 28,
           zIndex: 20, textAlign: "right",
@@ -124,9 +168,13 @@ export default function Home() {
           animation: "fadeIn 0.7s ease 0.15s both",
         }}>
           {([
-            ["FEELS LIKE", `${Math.round(weather.current.apparent_temperature)}°C`],
-            ["HUMIDITY", `${weather.current.relative_humidity_2m}%`],
-            ["WIND", `${Math.round(weather.current.wind_speed_10m)} km/h`],
+            ["FEELS LIKE", fmt(weather.current.apparent_temperature)],
+            ["HUMIDITY",   `${weather.current.relative_humidity_2m}%`],
+            ["WIND",       `${Math.round(weather.current.wind_speed_10m)} km/h`],
+            ...(sunrise && sunset ? [
+              ["SUNRISE", fmtTime(sunrise)],
+              ["SUNSET",  fmtTime(sunset)],
+            ] : []),
             ["COORDINATES", `${city.lat.toFixed(2)}° ${city.lon.toFixed(2)}°`],
           ] as [string, string][]).map(([label, value]) => (
             <div key={label}>
@@ -137,7 +185,8 @@ export default function Home() {
         </div>
       )}
 
-      {weather && !loading && (
+      {/* Forecast bar — hidden when keyboard is open */}
+      {weather && !loading && !kbOpen && (
         <div style={{
           position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 20,
           background: `linear-gradient(to top, ${theme.bg}f5 55%, transparent)`,
@@ -146,14 +195,36 @@ export default function Home() {
         }}>
           <div style={{ height: 1, marginBottom: 12, background: `linear-gradient(90deg, transparent, ${theme.sub}44, transparent)` }} />
           <div style={{ fontSize: 8, letterSpacing: 4, color: theme.sub, marginBottom: 10 }}>24H FORECAST</div>
-          <HourlyBar hourly={weather.hourly} theme={theme} />
+          <HourlyBar hourly={weather.hourly} theme={theme} useFahrenheit={useFahrenheit} />
         </div>
       )}
 
-      {city && !loading && (
+      {/* Top-right: attribution + °C/°F toggle */}
+      {city && !loading && !kbOpen && (
         <div style={{ position: "absolute", top: 30, right: 24, zIndex: 20, textAlign: "right" }}>
           <div style={{ fontSize: 8, letterSpacing: 2, color: `${theme.sub}88` }}>OFM · OPEN-METEO</div>
-          <div style={{ width: 20, height: 1, background: theme.accent, marginLeft: "auto", marginTop: 5 }} />
+          <div style={{ width: 20, height: 1, background: theme.accent, marginLeft: "auto", marginTop: 5, marginBottom: 10 }} />
+          {/* °C / °F toggle */}
+          <button
+            onClick={() => setUseFahrenheit(f => !f)}
+            style={{
+              background: "transparent", border: `1px solid ${theme.sub}44`,
+              color: theme.sub, fontSize: 9, letterSpacing: 2,
+              padding: "4px 8px", cursor: "pointer",
+              fontFamily: "'DM Mono', monospace",
+              transition: "color 0.2s, border-color 0.2s",
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLButtonElement).style.color = theme.text;
+              (e.currentTarget as HTMLButtonElement).style.borderColor = theme.sub;
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLButtonElement).style.color = theme.sub;
+              (e.currentTarget as HTMLButtonElement).style.borderColor = `${theme.sub}44`;
+            }}
+          >
+            {useFahrenheit ? "°C" : "°F"}
+          </button>
         </div>
       )}
 
@@ -179,9 +250,9 @@ export default function Home() {
         ::-webkit-scrollbar { display: none; }
         html, body { width: 100%; height: 100%; overflow: hidden; }
         .maplibregl-ctrl-bottom-right { display: none !important; }
-        .maplibregl-ctrl-bottom-left { display: none !important; }
+        .maplibregl-ctrl-bottom-left  { display: none !important; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+        @keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:0.35} }
       `}</style>
     </main>
   );

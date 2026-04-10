@@ -4,9 +4,12 @@ import { Theme, WeatherData } from "@/lib/types";
 interface Props {
   hourly: WeatherData["hourly"];
   theme: Theme;
+  useFahrenheit?: boolean;
 }
 
-export default function HourlyBar({ hourly, theme }: Props) {
+export default function HourlyBar({ hourly, theme, useFahrenheit = false }: Props) {
+  const toF = (c: number) => Math.round(c * 9 / 5 + 32);
+  const fmtT = (c: number) => useFahrenheit ? `${toF(c)}°` : `${Math.round(c)}°`;
   const now = new Date();
   const hours = hourly.time.slice(0, 24).map((t, i) => ({
     time: new Date(t),
@@ -34,7 +37,7 @@ export default function HourlyBar({ hourly, theme }: Props) {
               fontSize: 9, color: isNow ? theme.accent : `${theme.sub}bb`,
               fontFamily: "'DM Mono', monospace", letterSpacing: 0,
             }}>
-              {Math.round(h.temp)}°
+              {fmtT(h.temp)}
             </div>
             <div style={{
               width: isNow ? 3 : 2, height: heightPct,
